@@ -1,0 +1,38 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+
+  application:
+    name: e-commerce
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations:
+      - classpath:db/migration
+    baseline-version: 0
+
+
+server:
+  port: ${SERVER_PORT:8080}
+
+jwt:
+  secret: ${SECRET_KEY}
+  access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION}
+  refesh-token-expiration-ms: ${JWT_REFRESH_TOKEN_EXPIRATION}
+
+logging:
+  level:
+    org.flywaydb: DEBUG
