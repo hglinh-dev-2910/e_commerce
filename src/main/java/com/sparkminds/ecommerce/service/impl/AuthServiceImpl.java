@@ -17,6 +17,7 @@ import com.sparkminds.ecommerce.repository.UserRepository;
 import com.sparkminds.ecommerce.service.AuthService;
 import com.sparkminds.ecommerce.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -64,6 +66,9 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = createRefreshToken(user);
 
+        log.info("[REGISTER] Registered new user {}", request.getUsername());
+        log.info("[REGISTER] Created refresh token {}", refreshToken);
+
         return AuthResponse.success(
                 accessToken,
                 refreshToken,
@@ -84,6 +89,7 @@ public class AuthServiceImpl implements AuthService {
                     )
             );
         } catch (BadCredentialsException e) {
+            log.info("[LOGIN] Invalid username or password");
             throw new BadCredentialsException("Invalid username or password");
         }
 
@@ -92,6 +98,8 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = createRefreshToken(user);
+
+        log.info("[LOGIN] Logged in user {}", user.getUsername());
 
         return AuthResponse.success(
                 accessToken,
@@ -110,6 +118,8 @@ public class AuthServiceImpl implements AuthService {
 
         if (refreshToken.isExpired()) {
             refreshTokenRepository.delete(refreshToken);
+
+            log.info("[REFRESH TOKEN] Expired {}", refreshToken);
             throw new UnauthorizedException("Refresh token has expired. Please login again");
         }
 
@@ -120,6 +130,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.delete(refreshToken);
         String newRefreshToken = createRefreshToken(user);
 
+        log.info("[REFRESH TOKEN] Created new refresh token {}", newRefreshToken);
         return AuthResponse.success(
                 accessToken,
                 newRefreshToken,

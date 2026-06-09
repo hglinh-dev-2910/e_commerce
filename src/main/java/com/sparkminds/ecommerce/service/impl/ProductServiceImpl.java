@@ -12,6 +12,7 @@ import com.sparkminds.ecommerce.repository.ProductRepository;
 import com.sparkminds.ecommerce.repository.ProductSpecification;
 import com.sparkminds.ecommerce.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
@@ -91,6 +93,8 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         productRepository.save(product);
+        log.info("[PRODUCT] Created new product {}", product);
+
         return ProductResponse.fromEntity(product);
     }
 
@@ -109,6 +113,8 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
 
         productRepository.save(product);
+        log.info("[PRODUCT] Updated product {}", product);
+
         return ProductResponse.fromEntity(product);
     }
 
@@ -120,6 +126,7 @@ public class ProductServiceImpl implements ProductService {
 
         product.setActive(false);
         productRepository.save(product);
+        log.info("[PRODUCT] Deleted product {}", product);
     }
 
     private Category findActiveCategory(Long categoryId) {

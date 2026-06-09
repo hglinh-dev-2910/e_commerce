@@ -8,12 +8,14 @@ import com.sparkminds.ecommerce.exception.ResourceNotFoundException;
 import com.sparkminds.ecommerce.repository.CategoryRepository;
 import com.sparkminds.ecommerce.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
@@ -22,10 +24,13 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<CategoryResponse> getAllActiveCategories() {
+
+        log.info("[CATEGORIES] Getting all categories");
         return categoryRepository.findAllByIsActiveTrue()
                 .stream()
                 .map(CategoryResponse::fromEntity)
                 .collect(Collectors.toList());
+
     }
 
     @Override
@@ -41,6 +46,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .build();
 
         categoryRepository.save(category);
+        log.info("[CATEGORIES] Created category {}", category.getName());
         return CategoryResponse.fromEntity(category);
     }
 
@@ -52,5 +58,7 @@ public class CategoryServiceImpl implements CategoryService {
 
         category.setActive(false);
         categoryRepository.save(category);
+
+        log.info("[CATEGORIES] Deleted category {}", category.getName());
     }
 }

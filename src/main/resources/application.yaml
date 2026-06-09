@@ -36,3 +36,5 @@ jwt:
 logging:
   level:
     org.flywaydb: DEBUG
+    root: INFO
+    com.sparkminds.ecommerce: TRACE
