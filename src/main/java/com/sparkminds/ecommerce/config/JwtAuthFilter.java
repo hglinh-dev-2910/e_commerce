@@ -1,11 +1,14 @@
 package com.sparkminds.ecommerce.config;
 
+import com.sparkminds.ecommerce.repository.InvalidatedTokenRepository;
 import com.sparkminds.ecommerce.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,13 +19,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Instant;
-
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -42,6 +46,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final String jwt = authHeader.substring(7);
 
         try {
+            // extract jti
+            String jti = jwtUtil.extractId(jwt);
+            // revoked
+            if (jti != null && invalidatedTokenRepository.existsById(jti)) { // check blacklist
+                log.info("[LOGOUT] JTI exist: {}", jti);
+
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+
+                response.getWriter().write("""
+        {
+            "status":401,
+            "message":"Token has been revoked"
+        }
+        """);
+
+                return;
+            }
             final String username = jwtUtil.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

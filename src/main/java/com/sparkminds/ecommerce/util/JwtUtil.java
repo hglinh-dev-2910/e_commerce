@@ -50,10 +50,16 @@ public class JwtUtil {
         return claimsResolver.apply(claims);
     }
 
+    public String extractId(String token) {
+        return extractClaim(token, Claims::getId);
+    }
+
+
     private String buildToken(Map<String, Object> claims, String subject, long expirationMs) {
         return Jwts.builder()
                 .claims(claims)
                 .subject(subject)
+                .id(java.util.UUID.randomUUID().toString()) // revoked logout
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey())

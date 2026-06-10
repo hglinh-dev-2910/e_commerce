@@ -6,16 +6,18 @@ import com.sparkminds.ecommerce.dto.request.RefreshTokenRequest;
 import com.sparkminds.ecommerce.dto.request.RegisterRequest;
 import com.sparkminds.ecommerce.dto.response.AuthResponse;
 import com.sparkminds.ecommerce.entity.RefreshToken;
-import com.sparkminds.ecommerce.entity.Role;
+import com.sparkminds.ecommerce.entity.enums.Role;
 import com.sparkminds.ecommerce.entity.User;
 import com.sparkminds.ecommerce.exception.BadRequestException;
 import com.sparkminds.ecommerce.exception.DuplicateResourceException;
 import com.sparkminds.ecommerce.exception.ResourceNotFoundException;
 import com.sparkminds.ecommerce.exception.UnauthorizedException;
+import com.sparkminds.ecommerce.repository.InvalidatedTokenRepository;
 import com.sparkminds.ecommerce.repository.RefreshTokenRepository;
 import com.sparkminds.ecommerce.repository.UserRepository;
 import com.sparkminds.ecommerce.service.AuthService;
 import com.sparkminds.ecommerce.util.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,8 +27,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.sparkminds.ecommerce.entity.InvalidatedToken;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 @Slf4j
@@ -39,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
 
     @Value("${jwt.refesh-token-expiration-ms}")
     private long refreshTokenExpirationMs;
@@ -142,10 +147,46 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void logout(RefreshTokenRequest request) {
+    public void logout(RefreshTokenRequest request, HttpServletRequest httpRequest) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new BadRequestException("Invalid refresh token"));
-        refreshTokenRepository.delete(refreshToken);
+        refreshTokenRepository.delete(refreshToken); // delete refreshToken
+
+        final String authHeader = httpRequest.getHeader("Authorization");
+//        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+//            final String jwt = authHeader.substring(7); // get access-token
+//            try {
+//                String jti = jwtUtil.extractId(jwt); //jwt-id
+//                Date expiration = jwtUtil.extractExpiration(jwt);
+//
+//                if (jti != null && expiration != null) {
+//                    InvalidatedToken invalidatedToken = new InvalidatedToken(jti, expiration);
+////                    invalidatedToken.setId(jti);
+////                    invalidatedToken.setExpiryTime(expiration);
+//
+//
+//                    invalidatedTokenRepository.save(invalidatedToken); // save to blacklist
+//                }
+//            } catch (Exception e) {
+//                // No accessToken => expired || revoked
+//            }
+//        }
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new BadRequestException("Access token is required");
+        }
+        log.info("[LOGOUT] Authorization Header: {}", authHeader);
+
+        String accessToken = authHeader.substring(7);
+        String jti = jwtUtil.extractId(accessToken);
+        Date expiration = jwtUtil.extractExpiration(accessToken);
+
+        invalidatedTokenRepository.save(
+                InvalidatedToken.builder()
+                        .id(jti)
+                        .expiryTime(expiration)
+                        .build()
+        );
     }
 
     private String createRefreshToken(User user) {
